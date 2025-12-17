@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:image/image.dart' as img;
 import '../models/location_data.dart';
+import 'watermark_config.dart';
 
 class WatermarkService {
   /// Aplica marca de agua GPS - SIN badge flotante
@@ -24,19 +25,19 @@ class WatermarkService {
       final int imgWidth = mainImage.width;
       final int imgHeight = mainImage.height;
 
-      // Escala basada en ancho (referencia 720px para móvil)
-      final double scale = imgWidth / 720.0;
+      // Escala basada en ancho - usar PhotoWatermarkConfig.referenceWidth
+      final double scale = imgWidth / PhotoWatermarkConfig.referenceWidth;
 
       // ============================================================
-      // DIMENSIONES DEL OVERLAY PRINCIPAL
+      // DIMENSIONES DEL OVERLAY PRINCIPAL (desde PhotoWatermarkConfig)
       // ============================================================
-      final int overlayHeight = (200 * scale).toInt();
+      final int overlayHeight = (PhotoWatermarkConfig.overlayBaseHeight * scale).toInt();
       final int overlayY = imgHeight - overlayHeight;
-      final int margin = (10 * scale).toInt();
+      final int margin = (PhotoWatermarkConfig.baseMargin * scale).toInt();
 
       // ============================================================
-      // FONDO DEL OVERLAY (gris semi-transparente)
-      // Coincide con GpsOverlayPreview: Color.fromARGB(0, 3, 3, 3).withAlpha(150)
+      // FONDO DEL OVERLAY (desde PhotoWatermarkConfig)
+      // Ajusta PhotoWatermarkConfig.background* para cambiar color/opacidad
       // ============================================================
       img.fillRect(
         mainImage,
@@ -44,13 +45,13 @@ class WatermarkService {
         y1: overlayY,
         x2: imgWidth,
         y2: imgHeight,
-        color: img.ColorRgba8(3, 3, 3, 150),
+        color: PhotoWatermarkConfig.backgroundColor,
       );
 
       // ============================================================
       // MINIMAPA (esquina inferior izquierda)
       // ============================================================
-      final int mapSize = (130 * scale).toInt();
+      final int mapSize = (PhotoWatermarkConfig.mapBaseSize * scale).toInt();
       final int mapX = margin;
       final int mapY = overlayY + margin;
       final int mapHeight = overlayHeight - margin * 2;
@@ -91,11 +92,11 @@ class WatermarkService {
       _drawLocationPin(mainImage, pinCenterX, pinCenterY, scale);
 
       // Texto "Google" en el mapa con sombra blanca
-      // Coincide con GpsOverlayPreview: Shadow(color: Colors.white.withOpacity(0.7))
+      // Usa PhotoWatermarkConfig.smallFont para el tamaño de fuente
       _drawTextWithShadow(
         mainImage,
         text: 'Google',
-        font: img.arial14,
+        font: PhotoWatermarkConfig.smallFont,
         x: mapX + 3,
         y: mapY + mapHeight - 16,
         textColor: img.ColorRgba8(100, 100, 100, 255),
@@ -113,24 +114,24 @@ class WatermarkService {
           margin -
           (70 * scale).toInt(); // Espacio para bandera
 
-      // Línea vertical para cálculos
+      // Línea vertical para cálculos - usar PhotoWatermarkConfig
       int lineY = overlayY + margin;
-      final int lineSpacing = (26 * scale).toInt();
+      final int lineSpacing = (PhotoWatermarkConfig.lineSpacing * scale).toInt();
 
       // ============================================================
       // TÍTULO: "Ciudad, País" + bandera pequeña
-      // Coincide con GpsOverlayPreview: Shadow(color: Colors.black.withOpacity(0.5))
+      // Usa PhotoWatermarkConfig.mainFont y colores de configuración
       // ============================================================
       final String title = locationData.locationTitle;
 
       _drawTextWithShadow(
         mainImage,
         text: title,
-        font: img.arial24,
+        font: PhotoWatermarkConfig.mainFont,
         x: textX,
         y: lineY,
-        textColor: img.ColorRgba8(255, 255, 255, 255),
-        shadowColor: img.ColorRgba8(0, 0, 0, 128), // 0.5 opacity = ~128
+        textColor: PhotoWatermarkConfig.textColor,
+        shadowColor: PhotoWatermarkConfig.shadowColor,
       );
 
       // Bandera pequeña al lado del título
@@ -148,7 +149,7 @@ class WatermarkService {
         }
       }
 
-      lineY += lineSpacing + (15 * scale).toInt();
+      lineY += lineSpacing + (PhotoWatermarkConfig.titleSpacing * scale).toInt();
 
       // ============================================================
       // DIRECCIÓN (multilínea)
@@ -164,16 +165,16 @@ class WatermarkService {
         _drawTextWithShadow(
           mainImage,
           text: addressLines[i],
-          font: img.arial24,
+          font: PhotoWatermarkConfig.mainFont,
           x: textX,
           y: lineY,
-          textColor: img.ColorRgba8(255, 255, 255, 255),
-          shadowColor: img.ColorRgba8(0, 0, 0, 128),
+          textColor: PhotoWatermarkConfig.textColor,
+          shadowColor: PhotoWatermarkConfig.shadowColor,
         );
-        lineY += (30 * scale).toInt();
+        lineY += (PhotoWatermarkConfig.addressLineHeight * scale).toInt();
       }
 
-      lineY += (10 * scale).toInt();
+      lineY += (PhotoWatermarkConfig.coordsSpacing * scale).toInt();
 
       // ============================================================
       // COORDENADAS con sombra
@@ -184,14 +185,14 @@ class WatermarkService {
       _drawTextWithShadow(
         mainImage,
         text: coords,
-        font: img.arial24,
+        font: PhotoWatermarkConfig.mainFont,
         x: textX,
         y: lineY,
-        textColor: img.ColorRgba8(255, 255, 255, 255),
-        shadowColor: img.ColorRgba8(0, 0, 0, 128),
+        textColor: PhotoWatermarkConfig.textColor,
+        shadowColor: PhotoWatermarkConfig.shadowColor,
       );
 
-      lineY += (30 * scale).toInt();
+      lineY += (PhotoWatermarkConfig.addressLineHeight * scale).toInt();
 
       // ============================================================
       // FECHA Y HORA CON ZONA HORARIA con sombra
@@ -201,11 +202,11 @@ class WatermarkService {
       _drawTextWithShadow(
         mainImage,
         text: dateTime,
-        font: img.arial24,
+        font: PhotoWatermarkConfig.mainFont,
         x: textX,
         y: lineY,
-        textColor: img.ColorRgba8(255, 255, 255, 255),
-        shadowColor: img.ColorRgba8(0, 0, 0, 128),
+        textColor: PhotoWatermarkConfig.textColor,
+        shadowColor: PhotoWatermarkConfig.shadowColor,
       );
 
       return Uint8List.fromList(img.encodeJpg(mainImage, quality: 92));
