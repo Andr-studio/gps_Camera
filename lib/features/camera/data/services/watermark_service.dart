@@ -278,14 +278,14 @@ class WatermarkService {
 
   /// Formatea: "martes, 16/12/2025 03:04 p. m. GMT -03:00"
   String _formatFullDateTime(DateTime dt) {
-    // Día de la semana en español
+    // Día de la semana en español (sin acentos por limitación de img.arial)
     const dias = [
       'lunes',
       'martes',
-      'miércoles',
+      'miercoles',  // Sin acento por compatibilidad con img.arial
       'jueves',
       'viernes',
-      'sábado',
+      'sabado',     // Sin acento por compatibilidad con img.arial
       'domingo'
     ];
     final String diaSemana = dias[dt.weekday - 1];

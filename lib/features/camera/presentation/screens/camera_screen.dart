@@ -12,6 +12,7 @@ import '../../data/services/weather_service.dart';
 import '../../data/services/flag_service.dart';
 import '../../data/services/watermark_service.dart';
 import '../../data/services/gallery_service.dart';
+import '../../data/services/video_watermark_service.dart';
 import '../../data/repositories/photo_repository.dart';
 import '../../data/models/location_data.dart';
 import '../widgets/camera_preview.dart';
@@ -32,6 +33,7 @@ class _CameraScreenState extends State<CameraScreen> {
   late GeocodingService _geocodingService;
   late MapService _mapService;
   late FlagService _flagService;
+  late VideoWatermarkService _videoWatermarkService;
 
   bool _isInitialized = false;
   bool _isCapturing = false;
@@ -43,6 +45,11 @@ class _CameraScreenState extends State<CameraScreen> {
   Uint8List? _minimapBytes;
   Uint8List? _flagBytes;
   bool _isLoadingLocation = true;
+
+  // Datos de ubicación capturados al iniciar grabación de video
+  LocationData? _recordingLocationData;
+  Uint8List? _recordingMinimapBytes;
+  Uint8List? _recordingFlagBytes;
 
   @override
   void initState() {
@@ -59,6 +66,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _geocodingService = GeocodingService();
     _mapService = MapService();
     _flagService = FlagService();
+    _videoWatermarkService = VideoWatermarkService();
 
     _photoRepository = PhotoRepository(
       cameraService: _cameraService,
@@ -159,6 +167,11 @@ class _CameraScreenState extends State<CameraScreen> {
     if (!_isRecording) {
       // Iniciar grabación
       try {
+        // Guardar datos de ubicación GPS actuales para la marca de agua
+        _recordingLocationData = _currentLocationData;
+        _recordingMinimapBytes = _minimapBytes;
+        _recordingFlagBytes = _flagBytes;
+
         await _cameraService.startVideoRecording();
         setState(() {
           _isRecording = true;
@@ -200,8 +213,83 @@ class _CameraScreenState extends State<CameraScreen> {
           _recordingDuration = Duration.zero;
         });
 
-        if (video != null) {
-          // Guardar el video en la galería
+        if (video != null && _recordingLocationData != null) {
+          // Mostrar indicador de procesamiento
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Procesando video con marca de agua GPS...'),
+                  ],
+                ),
+                backgroundColor: Colors.blue,
+                duration: Duration(seconds: 30),
+              ),
+            );
+          }
+
+          // Aplicar marca de agua GPS al video
+          final processedVideoPath =
+              await _videoWatermarkService.applyWatermarkToVideo(
+            videoPath: video.path,
+            locationData: _recordingLocationData!,
+            minimapBytes: _recordingMinimapBytes,
+            flagBytes: _recordingFlagBytes,
+          );
+
+          if (processedVideoPath != null) {
+            // Guardar el video procesado en la galería
+            await Gal.putVideo(processedVideoPath);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('✓ Video con GPS guardado en Galería'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } else {
+            // Si falla el procesamiento, guardar video original
+            await Gal.putVideo(video.path);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Video guardado sin marca de agua GPS'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          }
+        } else if (video != null) {
+          // Si no hay datos de ubicación, guardar sin marca de agua
           await Gal.putVideo(video.path);
 
           if (mounted) {
@@ -209,12 +297,12 @@ class _CameraScreenState extends State<CameraScreen> {
               const SnackBar(
                 content: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
+                    Icon(Icons.warning, color: Colors.white),
                     SizedBox(width: 8),
-                    Text('✓ Video guardado en Galería'),
+                    Text('Video guardado sin GPS'),
                   ],
                 ),
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.orange,
                 duration: Duration(seconds: 2),
               ),
             );
@@ -225,7 +313,7 @@ class _CameraScreenState extends State<CameraScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al detener grabación: $e'),
+              content: Text('Error al procesar video: $e'),
               backgroundColor: Colors.red.shade700,
             ),
           );
