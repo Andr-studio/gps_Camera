@@ -138,8 +138,8 @@ class VideoWatermarkService {
         height: overlayHeight,
       );
 
-      // Escalar el overlay a un tamaño más pequeño (40% del original)
-      // Esto hace que la marca de agua sea más discreta en el video
+      // Escalar el overlay a un tamaño más grande (70% del original)
+      // Esto hace que la marca de agua sea más legible en el video
       final double videoOverlayScale = 0.40;
       final int scaledWidth = (videoWidth * videoOverlayScale).toInt();
       final int scaledHeight = (overlayHeight * videoOverlayScale).toInt();
@@ -148,7 +148,7 @@ class VideoWatermarkService {
         croppedOverlay,
         width: scaledWidth,
         height: scaledHeight,
-        interpolation: img.Interpolation.linear,
+        interpolation: img.Interpolation.cubic,
       );
 
       // Guardar la imagen escalada del overlay

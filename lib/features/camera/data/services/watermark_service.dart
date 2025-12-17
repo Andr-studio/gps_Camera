@@ -148,7 +148,7 @@ class WatermarkService {
         }
       }
 
-      lineY += lineSpacing + (5 * scale).toInt();
+      lineY += lineSpacing + (15 * scale).toInt();
 
       // ============================================================
       // DIRECCIÓN (multilínea)
@@ -156,7 +156,7 @@ class WatermarkService {
       final String address =
           locationData.fullAddress ?? locationData.addressLine;
       final int maxChars =
-          (textWidth / 8).toInt(); // ~8px por carácter en arial14
+          (textWidth / 14).toInt(); // ~14px por carácter en arial24
       final List<String> addressLines = _wrapText(address, maxChars);
 
       // Mostrar hasta 2 líneas de dirección con sombra
@@ -164,16 +164,16 @@ class WatermarkService {
         _drawTextWithShadow(
           mainImage,
           text: addressLines[i],
-          font: img.arial14,
+          font: img.arial24,
           x: textX,
           y: lineY,
           textColor: img.ColorRgba8(255, 255, 255, 255),
           shadowColor: img.ColorRgba8(0, 0, 0, 128),
         );
-        lineY += (18 * scale).toInt();
+        lineY += (30 * scale).toInt();
       }
 
-      lineY += (3 * scale).toInt();
+      lineY += (10 * scale).toInt();
 
       // ============================================================
       // COORDENADAS con sombra
@@ -184,14 +184,14 @@ class WatermarkService {
       _drawTextWithShadow(
         mainImage,
         text: coords,
-        font: img.arial14,
+        font: img.arial24,
         x: textX,
         y: lineY,
         textColor: img.ColorRgba8(255, 255, 255, 255),
         shadowColor: img.ColorRgba8(0, 0, 0, 128),
       );
 
-      lineY += (20 * scale).toInt();
+      lineY += (30 * scale).toInt();
 
       // ============================================================
       // FECHA Y HORA CON ZONA HORARIA con sombra
@@ -201,7 +201,7 @@ class WatermarkService {
       _drawTextWithShadow(
         mainImage,
         text: dateTime,
-        font: img.arial14,
+        font: img.arial24,
         x: textX,
         y: lineY,
         textColor: img.ColorRgba8(255, 255, 255, 255),
@@ -282,10 +282,10 @@ class WatermarkService {
     const dias = [
       'lunes',
       'martes',
-      'miercoles',  // Sin acento por compatibilidad con img.arial
+      'miercoles', // Sin acento por compatibilidad con img.arial
       'jueves',
       'viernes',
-      'sabado',     // Sin acento por compatibilidad con img.arial
+      'sabado', // Sin acento por compatibilidad con img.arial
       'domingo'
     ];
     final String diaSemana = dias[dt.weekday - 1];
