@@ -16,13 +16,27 @@ class PermissionUtil {
     return status.isGranted;
   }
 
+  /// Permiso de micrófono para grabación de video
+  static Future<bool> requestMicrophonePermission() async {
+    final status = await Permission.microphone.request();
+    return status.isGranted;
+  }
+
+  /// Permiso para acceder a videos de la galería
+  static Future<bool> requestVideosPermission() async {
+    final status = await Permission.videos.request();
+    return status.isGranted || status.isLimited;
+  }
+
   static Future<bool> requestAllPermissions() async {
     final results = await [
       Permission.camera,
+      Permission.microphone,
       Permission.locationWhenInUse,
       Permission.photos,
+      Permission.videos,
     ].request();
 
-    return results.values.every((status) => status.isGranted);
+    return results.values.every((status) => status.isGranted || status.isLimited);
   }
 }
