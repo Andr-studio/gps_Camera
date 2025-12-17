@@ -10,9 +10,11 @@
 
     <!-- Permisos de almacenamiento para Android 12 y anteriores (API <= 32) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-                     android:maxSdkVersion="32"/>
+                     android:maxSdkVersion="32"
+                     tools:replace="android:maxSdkVersion"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-                     android:maxSdkVersion="32"/>
+                     android:maxSdkVersion="32"
+                     tools:replace="android:maxSdkVersion"/>
 
     <!-- Permisos para Android 13+ (API 33+) - Incluyendo Samsung Android 14, 15, 16 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
