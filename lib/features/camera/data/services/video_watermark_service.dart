@@ -40,12 +40,11 @@ class VideoWatermarkService {
           '${directory.path}/video_with_watermark_$timestamp.mp4';
 
       // 3. Construir comando FFmpeg para superponer la marca de agua
-      // scale2ref escala el overlay (1:v) para que coincida con el ancho del video (0:v)
-      // manteniendo la proporción de altura
-      // overlay=0:main_h-overlay_h posiciona el overlay en la parte inferior
+      // El overlay ya está recortado a solo la franja GPS
+      // overlay=0:main_h-overlay_h posiciona el overlay en la parte inferior del video
       // NO usar shortest=1 porque eso detiene el video cuando termina el overlay (imagen estática)
       final command = '-i "$videoPath" -i "$overlayImagePath" '
-          '-filter_complex "[1:v][0:v]scale2ref=oh*mdar:ih[ovrl][vid];[vid][ovrl]overlay=0:main_h-overlay_h" '
+          '-filter_complex "[0:v][1:v]overlay=0:main_h-overlay_h" '
           '-c:a copy -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p '
           '"$outputPath"';
 
