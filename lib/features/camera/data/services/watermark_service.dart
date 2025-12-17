@@ -36,6 +36,7 @@ class WatermarkService {
 
       // ============================================================
       // FONDO DEL OVERLAY (gris semi-transparente)
+      // Coincide con GpsOverlayPreview: Color.fromARGB(0, 3, 3, 3).withAlpha(150)
       // ============================================================
       img.fillRect(
         mainImage,
@@ -43,7 +44,7 @@ class WatermarkService {
         y1: overlayY,
         x2: imgWidth,
         y2: imgHeight,
-        color: img.ColorRgba8(0, 0, 0, 310),
+        color: img.ColorRgba8(3, 3, 3, 150),
       );
 
       // ============================================================
@@ -89,14 +90,18 @@ class WatermarkService {
       final int pinCenterY = mapY + mapHeight ~/ 2;
       _drawLocationPin(mainImage, pinCenterX, pinCenterY, scale);
 
-      // Texto "Google" en el mapa
-      img.drawString(
+      // Texto "Google" en el mapa con sombra blanca
+      // Coincide con GpsOverlayPreview: Shadow(color: Colors.white.withOpacity(0.7))
+      _drawTextWithShadow(
         mainImage,
-        'Google',
+        text: 'Google',
         font: img.arial14,
         x: mapX + 3,
         y: mapY + mapHeight - 16,
-        color: img.ColorRgba8(100, 100, 100, 255),
+        textColor: img.ColorRgba8(100, 100, 100, 255),
+        shadowColor: img.ColorRgba8(255, 255, 255, 178), // 0.7 opacity = ~178
+        shadowOffsetX: 0,
+        shadowOffsetY: 1,
       );
 
       // ============================================================
@@ -114,16 +119,18 @@ class WatermarkService {
 
       // ============================================================
       // TÍTULO: "Ciudad, País" + bandera pequeña
+      // Coincide con GpsOverlayPreview: Shadow(color: Colors.black.withOpacity(0.5))
       // ============================================================
       final String title = locationData.locationTitle;
 
-      img.drawString(
+      _drawTextWithShadow(
         mainImage,
-        title,
+        text: title,
         font: img.arial24,
         x: textX,
         y: lineY,
-        color: img.ColorRgba8(255, 255, 255, 255),
+        textColor: img.ColorRgba8(255, 255, 255, 255),
+        shadowColor: img.ColorRgba8(0, 0, 0, 128), // 0.5 opacity = ~128
       );
 
       // Bandera pequeña al lado del título
@@ -152,15 +159,16 @@ class WatermarkService {
           (textWidth / 8).toInt(); // ~8px por carácter en arial14
       final List<String> addressLines = _wrapText(address, maxChars);
 
-      // Mostrar hasta 2 líneas de dirección
+      // Mostrar hasta 2 líneas de dirección con sombra
       for (int i = 0; i < math.min(addressLines.length, 2); i++) {
-        img.drawString(
+        _drawTextWithShadow(
           mainImage,
-          addressLines[i],
+          text: addressLines[i],
           font: img.arial14,
           x: textX,
           y: lineY,
-          color: img.ColorRgba8(255, 255, 255, 255),
+          textColor: img.ColorRgba8(255, 255, 255, 255),
+          shadowColor: img.ColorRgba8(0, 0, 0, 128),
         );
         lineY += (18 * scale).toInt();
       }
@@ -168,34 +176,36 @@ class WatermarkService {
       lineY += (3 * scale).toInt();
 
       // ============================================================
-      // COORDENADAS
+      // COORDENADAS con sombra
       // ============================================================
       final String coords = 'Lat ${locationData.latitude.toStringAsFixed(6)}  '
           'Long ${locationData.longitude.toStringAsFixed(6)}';
 
-      img.drawString(
+      _drawTextWithShadow(
         mainImage,
-        coords,
+        text: coords,
         font: img.arial14,
         x: textX,
         y: lineY,
-        color: img.ColorRgba8(255, 255, 255, 255),
+        textColor: img.ColorRgba8(255, 255, 255, 255),
+        shadowColor: img.ColorRgba8(0, 0, 0, 128),
       );
 
       lineY += (20 * scale).toInt();
 
       // ============================================================
-      // FECHA Y HORA CON ZONA HORARIA
+      // FECHA Y HORA CON ZONA HORARIA con sombra
       // ============================================================
       final String dateTime = _formatFullDateTime(locationData.timestamp);
 
-      img.drawString(
+      _drawTextWithShadow(
         mainImage,
-        dateTime,
+        text: dateTime,
         font: img.arial14,
         x: textX,
         y: lineY,
-        color: img.ColorRgba8(255, 255, 255, 255),
+        textColor: img.ColorRgba8(255, 255, 255, 255),
+        shadowColor: img.ColorRgba8(0, 0, 0, 128),
       );
 
       return Uint8List.fromList(img.encodeJpg(mainImage, quality: 92));
@@ -203,6 +213,40 @@ class WatermarkService {
       print('Error aplicando marca de agua: $e');
       return null;
     }
+  }
+
+  /// Dibuja texto con sombra para mejorar legibilidad
+  /// Coincide con el efecto de GpsOverlayPreview
+  void _drawTextWithShadow(
+    img.Image image, {
+    required String text,
+    required img.BitmapFont font,
+    required int x,
+    required int y,
+    img.Color? textColor,
+    img.Color? shadowColor,
+    int shadowOffsetX = 1,
+    int shadowOffsetY = 1,
+  }) {
+    // Dibujar sombra primero
+    img.drawString(
+      image,
+      text,
+      font: font,
+      x: x + shadowOffsetX,
+      y: y + shadowOffsetY,
+      color: shadowColor ?? img.ColorRgba8(0, 0, 0, 128),
+    );
+
+    // Dibujar texto principal encima
+    img.drawString(
+      image,
+      text,
+      font: font,
+      x: x,
+      y: y,
+      color: textColor ?? img.ColorRgba8(255, 255, 255, 255),
+    );
   }
 
   /// Divide texto largo en múltiples líneas
@@ -267,9 +311,10 @@ class WatermarkService {
   }
 
   /// Dibuja un pin de ubicación estilo Material Icons.location_on
+  /// Coincide con GpsOverlayPreview: Colors.red[700]
   void _drawLocationPin(
       img.Image image, int centerX, int centerY, double scale) {
-    final int pinSize = (24 * scale).toInt();
+    final int pinSize = (26 * scale).toInt(); // Tamaño ajustado para coincidir
     final int pinWidth = (pinSize * 0.7).toInt();
     final int pinHeight = pinSize;
     final int circleRadius = (pinWidth / 2).toInt();
@@ -278,24 +323,25 @@ class WatermarkService {
     final int topY = centerY - (pinHeight ~/ 2);
     final int circleCenterY = topY + circleRadius;
 
-    // Sombra del pin
+    // Sombra del pin más pronunciada para coincidir con BoxShadow
+    // BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4, offset: Offset(1, 1))
     _drawPinShape(
       image,
       centerX: centerX + 1,
       circleCenterY: circleCenterY + 1,
       circleRadius: circleRadius,
       pinHeight: pinHeight,
-      color: img.ColorRgba8(0, 0, 0, 100),
+      color: img.ColorRgba8(0, 0, 0, 76), // 0.3 opacity = ~76
     );
 
-    // Pin rojo principal
+    // Pin rojo principal - Colors.red[700] es aproximadamente RGB(198, 40, 40)
     _drawPinShape(
       image,
       centerX: centerX,
       circleCenterY: circleCenterY,
       circleRadius: circleRadius,
       pinHeight: pinHeight,
-      color: img.ColorRgba8(211, 47, 47, 255), // Rojo Material Design
+      color: img.ColorRgba8(198, 40, 40, 255), // Colors.red[700]
     );
 
     // Círculo blanco interior
