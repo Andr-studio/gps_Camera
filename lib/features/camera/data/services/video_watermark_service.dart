@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import '../models/location_data.dart';
+import 'watermark_config.dart';
 import 'watermark_service.dart';
 
 class VideoWatermarkService {
@@ -41,10 +42,11 @@ class VideoWatermarkService {
 
       // 3. Construir comando FFmpeg para superponer la marca de agua
       // El overlay ya está recortado y escalado a solo la franja GPS
-      // overlay=10:main_h-overlay_h-10 posiciona el overlay en la esquina inferior izquierda con margen
+      // overlay=X:main_h-overlay_h-Y posiciona el overlay en la esquina inferior izquierda con margen
       // NO usar shortest=1 porque eso detiene el video cuando termina el overlay (imagen estática)
+      final int margin = VideoWatermarkConfig.marginFromEdge;
       final command = '-i "$videoPath" -i "$overlayImagePath" '
-          '-filter_complex "[0:v][1:v]overlay=10:main_h-overlay_h-10" '
+          '-filter_complex "[0:v][1:v]overlay=$margin:main_h-overlay_h-$margin" '
           '-c:a copy -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p '
           '"$outputPath"';
 
@@ -93,9 +95,9 @@ class VideoWatermarkService {
     Uint8List? flagBytes,
   }) async {
     try {
-      // Crear una imagen base de 1920x1080 (resolución común de video)
-      final int videoWidth = 1920;
-      final int videoHeight = 1080;
+      // Usar resolución de VideoWatermarkConfig
+      final int videoWidth = VideoWatermarkConfig.baseVideoWidth;
+      final int videoHeight = VideoWatermarkConfig.baseVideoHeight;
 
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -138,9 +140,9 @@ class VideoWatermarkService {
         height: overlayHeight,
       );
 
-      // Escalar el overlay a un tamaño más grande (70% del original)
-      // Esto hace que la marca de agua sea más legible en el video
-      final double videoOverlayScale = 0.40;
+      // Escalar el overlay usando la configuración de VideoWatermarkConfig
+      // Ajusta VideoWatermarkConfig.overlayScale para cambiar el tamaño
+      final double videoOverlayScale = VideoWatermarkConfig.overlayScale;
       final int scaledWidth = (videoWidth * videoOverlayScale).toInt();
       final int scaledHeight = (overlayHeight * videoOverlayScale).toInt();
 
