@@ -40,11 +40,11 @@ class VideoWatermarkService {
           '${directory.path}/video_with_watermark_$timestamp.mp4';
 
       // 3. Construir comando FFmpeg para superponer la marca de agua
-      // El overlay ya está recortado a solo la franja GPS
-      // overlay=0:main_h-overlay_h posiciona el overlay en la parte inferior del video
+      // El overlay ya está recortado y escalado a solo la franja GPS
+      // overlay=10:main_h-overlay_h-10 posiciona el overlay en la esquina inferior izquierda con margen
       // NO usar shortest=1 porque eso detiene el video cuando termina el overlay (imagen estática)
       final command = '-i "$videoPath" -i "$overlayImagePath" '
-          '-filter_complex "[0:v][1:v]overlay=0:main_h-overlay_h" '
+          '-filter_complex "[0:v][1:v]overlay=10:main_h-overlay_h-10" '
           '-c:a copy -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p '
           '"$outputPath"';
 
@@ -138,9 +138,22 @@ class VideoWatermarkService {
         height: overlayHeight,
       );
 
-      // Guardar la imagen recortada del overlay
-      final overlayPath = '${directory.path}/overlay_$timestamp.jpg';
-      await File(overlayPath).writeAsBytes(img.encodeJpg(croppedOverlay, quality: 92));
+      // Escalar el overlay a un tamaño más pequeño (40% del original)
+      // Esto hace que la marca de agua sea más discreta en el video
+      final double videoOverlayScale = 0.40;
+      final int scaledWidth = (videoWidth * videoOverlayScale).toInt();
+      final int scaledHeight = (overlayHeight * videoOverlayScale).toInt();
+
+      final scaledOverlay = img.copyResize(
+        croppedOverlay,
+        width: scaledWidth,
+        height: scaledHeight,
+        interpolation: img.Interpolation.linear,
+      );
+
+      // Guardar la imagen escalada del overlay
+      final overlayPath = '${directory.path}/overlay_$timestamp.png';
+      await File(overlayPath).writeAsBytes(img.encodePng(scaledOverlay));
 
       // Eliminar imagen temporal
       try {
