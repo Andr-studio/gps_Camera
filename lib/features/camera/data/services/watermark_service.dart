@@ -68,7 +68,7 @@ class WatermarkService {
 
       // Agregar minimapa si está disponible (en la esquina inferior IZQUIERDA)
       if (minimapBytes != null) {
-        final minimapImage = img.decodePng(minimapBytes);
+        final minimapImage = img.decodeImage(minimapBytes);
         if (minimapImage != null) {
           // Redimensionar minimapa usando configuración
           final resizedMinimap = img.copyResize(
@@ -94,7 +94,7 @@ class WatermarkService {
 
         // Agregar icono del clima si está disponible
         if (weatherIconBytes != null && weatherData != null) {
-          final weatherIcon = img.decodePng(weatherIconBytes);
+          final weatherIcon = img.decodeImage(weatherIconBytes);
           if (weatherIcon != null) {
             // Redimensionar icono del clima
             final resizedWeatherIcon = img.copyResize(weatherIcon, width: 50, height: 50);
@@ -119,7 +119,7 @@ class WatermarkService {
 
         // Agregar bandera si está disponible
         if (flagBytes != null) {
-          final flagImage = img.decodePng(flagBytes);
+          final flagImage = img.decodeImage(flagBytes);
           if (flagImage != null) {
             // Redimensionar bandera usando configuración
             final resizedFlag = img.copyResize(

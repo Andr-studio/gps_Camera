@@ -13,8 +13,9 @@ class WatermarkConfig {
   /// Altura del overlay oscuro en fotos
   static const double photoOverlayHeight = 200.0;
 
-  /// Margen izquierdo del texto en fotos
-  static const double photoTextMarginLeft = 20.0;
+  /// Margen izquierdo del texto en fotos (después del minimapa)
+  /// El minimapa ocupa 10 + 120 = 130px desde la izquierda
+  static const double photoTextMarginLeft = 145.0;
 
   /// Posición Y del título en fotos (desde abajo)
   static const double photoTitlePositionY = 180.0;
