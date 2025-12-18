@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import '../models/location_data.dart';
-import 'watermark_config.dart';
 import 'weather_service.dart';
 
 /// Servicio de marca de agua para fotos usando Canvas y Google Fonts
-/// Soporta UTF-8 completo (acentos, ñ, etc.)
+/// Diseño idéntico a GpsOverlayPreview: minimapa a la izquierda, texto a la derecha
 class WatermarkService {
   /// Aplica marca de agua GPS a una foto
+  /// El diseño es idéntico al preview: minimapa integrado a la izquierda, texto a la derecha
   Future<Uint8List?> applyWatermarkToPhoto({
     required String imagePath,
     required LocationData locationData,
@@ -31,24 +31,31 @@ class WatermarkService {
         return null;
       }
 
-      // Preparar textos con acentos
+      // Calcular escala basada en el ancho de la imagen (referencia: 720px como en el preview)
+      final double scale = originalImage.width / 720.0;
+
+      // Preparar textos
       final String title = locationData.locationTitle;
       final String address =
           locationData.fullAddress ?? locationData.addressLine;
-      final String coords = 'Lat ${locationData.latitude.toStringAsFixed(6)}°  '
-          'Long ${locationData.longitude.toStringAsFixed(6)}°';
+      final String coords = 'Lat ${locationData.latitude.toStringAsFixed(6)}  '
+          'Long ${locationData.longitude.toStringAsFixed(6)}';
       final String dateTime = _formatFullDateTime(locationData.timestamp);
+      final String? countryFlag = locationData.countryCode != null
+          ? _getCountryFlag(locationData.countryCode!)
+          : null;
 
-      // Crear overlay con Canvas usando Google Fonts
-      final overlayBytes = await _createTextOverlay(
+      // Crear overlay con diseño idéntico al preview
+      final overlayBytes = await _createPreviewStyleOverlay(
         width: originalImage.width,
         height: originalImage.height,
+        scale: scale,
         title: title,
         address: address,
         coords: coords,
         dateTime: dateTime,
+        countryFlag: countryFlag,
         minimapBytes: minimapBytes,
-        flagBytes: flagBytes,
       );
 
       if (overlayBytes == null) {
@@ -66,74 +73,6 @@ class WatermarkService {
       // Componer la imagen original con el overlay
       img.compositeImage(originalImage, overlayImage);
 
-      // Agregar minimapa si está disponible (en la esquina inferior IZQUIERDA)
-      if (minimapBytes != null) {
-        final minimapImage = img.decodeImage(minimapBytes);
-        if (minimapImage != null) {
-          // Redimensionar minimapa usando configuración
-          final resizedMinimap = img.copyResize(
-            minimapImage,
-            width: WatermarkConfig.photoMinimapWidth,
-            height: WatermarkConfig.photoMinimapHeight,
-          );
-
-          // Posicionar en la esquina inferior IZQUIERDA usando configuración
-          final minimapX = WatermarkConfig.photoMinimapMarginLeft;
-          final minimapY = originalImage.height -
-              WatermarkConfig.photoMinimapHeight -
-              WatermarkConfig.photoMinimapMarginBottom;
-
-          img.compositeImage(originalImage, resizedMinimap, dstX: minimapX, dstY: minimapY);
-        }
-      }
-
-      // Agregar bandera y clima en la esquina superior derecha
-      if (flagBytes != null || weatherIconBytes != null) {
-        int currentX = originalImage.width - WatermarkConfig.photoFlagMarginRight;
-        final topY = WatermarkConfig.photoFlagMarginTop;
-
-        // Agregar icono del clima si está disponible
-        if (weatherIconBytes != null && weatherData != null) {
-          final weatherIcon = img.decodeImage(weatherIconBytes);
-          if (weatherIcon != null) {
-            // Redimensionar icono del clima
-            final resizedWeatherIcon = img.copyResize(weatherIcon, width: 50, height: 50);
-
-            currentX -= 50;
-            img.compositeImage(originalImage, resizedWeatherIcon, dstX: currentX, dstY: topY);
-
-            // Agregar temperatura en texto
-            final tempText = '${weatherData.temperature.toStringAsFixed(0)}°C';
-            final tempImage = await _createTemperatureOverlay(tempText, 50, 20);
-            if (tempImage != null) {
-              final decodedTempImage = img.decodePng(tempImage);
-              if (decodedTempImage != null) {
-                img.compositeImage(originalImage, decodedTempImage,
-                    dstX: currentX, dstY: topY + 50);
-              }
-            }
-
-            currentX -= 10; // Espacio entre clima y bandera
-          }
-        }
-
-        // Agregar bandera si está disponible
-        if (flagBytes != null) {
-          final flagImage = img.decodeImage(flagBytes);
-          if (flagImage != null) {
-            // Redimensionar bandera usando configuración
-            final resizedFlag = img.copyResize(
-              flagImage,
-              width: WatermarkConfig.photoFlagWidth,
-              height: WatermarkConfig.photoFlagHeight,
-            );
-
-            currentX -= WatermarkConfig.photoFlagWidth;
-            img.compositeImage(originalImage, resizedFlag, dstX: currentX, dstY: topY);
-          }
-        }
-      }
-
       // Codificar a JPEG
       final resultBytes =
           Uint8List.fromList(img.encodeJpg(originalImage, quality: 95));
@@ -145,102 +84,138 @@ class WatermarkService {
     }
   }
 
-  /// Crea un overlay de texto usando Canvas y Google Fonts
-  Future<Uint8List?> _createTextOverlay({
+  /// Crea un overlay con diseño idéntico a GpsOverlayPreview
+  /// Minimapa a la izquierda, texto a la derecha, bandera junto al título
+  Future<Uint8List?> _createPreviewStyleOverlay({
     required int width,
     required int height,
+    required double scale,
     required String title,
     required String address,
     required String coords,
     required String dateTime,
+    String? countryFlag,
     Uint8List? minimapBytes,
-    Uint8List? flagBytes,
   }) async {
     try {
-      // Crear un PictureRecorder para dibujar
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
 
-      // Fondo oscuro semitransparente en la parte inferior
-      final overlayHeight = WatermarkConfig.photoOverlayHeight;
+      // Dimensiones del overlay (igual que el preview)
+      final double overlayHeight = 200.0 * scale;
+      final double margin = 10.0 * scale;
+      final double minimapWidth = 130.0 * scale;
+      final double minimapHeight = overlayHeight - margin * 2;
+      final double textAreaX = margin + minimapWidth + 15 * scale;
+      final double textAreaWidth = width - textAreaX - margin;
+
+      // Posición Y del overlay (parte inferior)
+      final double overlayY = height - overlayHeight;
+
+      // 1. Fondo oscuro semitransparente
       final overlayPaint = Paint()
-        ..color =
-            Colors.black.withOpacity(WatermarkConfig.photoBackgroundOpacity)
+        ..color = const Color.fromARGB(150, 3, 3, 3)
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(
-        Rect.fromLTWH(
-            0, height - overlayHeight, width.toDouble(), overlayHeight),
+        Rect.fromLTWH(0, overlayY, width.toDouble(), overlayHeight),
         overlayPaint,
       );
 
-      // Configurar estilo de texto con Google Fonts Roboto
-      final titleTextStyle = GoogleFonts.roboto(
-        fontSize: WatermarkConfig.photoTitleFontSize,
-        fontWeight:
-            FontWeight.values[WatermarkConfig.photoTitleFontWeight ~/ 100 - 1],
-        color: Colors.white,
-        shadows: [
-          const Shadow(
-            color: Colors.black,
-            offset: Offset(1, 1),
-            blurRadius: 2,
-          ),
-        ],
-      );
+      // 2. Dibujar minimapa
+      if (minimapBytes != null) {
+        await _drawMinimap(
+          canvas: canvas,
+          minimapBytes: minimapBytes,
+          x: margin,
+          y: overlayY + margin,
+          width: minimapWidth,
+          height: minimapHeight,
+          scale: scale,
+        );
+      } else {
+        // Dibujar placeholder de minimapa
+        _drawMinimapPlaceholder(
+          canvas: canvas,
+          x: margin,
+          y: overlayY + margin,
+          width: minimapWidth,
+          height: minimapHeight,
+          scale: scale,
+        );
+      }
 
-      final textStyle = GoogleFonts.roboto(
-        fontSize: WatermarkConfig.photoTextFontSize,
-        fontWeight:
-            FontWeight.values[WatermarkConfig.photoTextFontWeight ~/ 100 - 1],
+      // 3. Dibujar área de texto a la derecha del minimapa
+      double currentY = overlayY + margin;
+
+      // Título + bandera emoji
+      final titleStyle = GoogleFonts.roboto(
+        fontSize: 18 * scale,
+        fontWeight: FontWeight.bold,
         color: Colors.white,
         shadows: [
-          const Shadow(
-            color: Colors.black,
-            offset: Offset(1, 1),
+          Shadow(
+            color: Colors.black.withOpacity(0.5),
+            offset: const Offset(1, 1),
             blurRadius: 2,
           ),
         ],
       );
 
       // Dibujar título
+      final titleText = countryFlag != null ? '$title  $countryFlag' : title;
       _drawText(
         canvas: canvas,
-        text: title,
-        style: titleTextStyle,
-        x: WatermarkConfig.photoTextMarginLeft,
-        y: height - WatermarkConfig.photoTitlePositionY,
-        maxWidth: width - (WatermarkConfig.photoTextMarginLeft * 2),
+        text: titleText,
+        style: titleStyle,
+        x: textAreaX,
+        y: currentY,
+        maxWidth: textAreaWidth,
       );
 
-      // Dibujar dirección
+      currentY += 24 * scale; // Espacio después del título
+
+      // Estilo para texto normal
+      final textStyle = GoogleFonts.roboto(
+        fontSize: 11 * scale,
+        fontWeight: FontWeight.normal,
+        color: Colors.white,
+        height: 1.3,
+      );
+
+      // Dirección
       _drawText(
         canvas: canvas,
         text: address,
         style: textStyle,
-        x: WatermarkConfig.photoTextMarginLeft,
-        y: height - WatermarkConfig.photoAddressPositionY,
-        maxWidth: width - (WatermarkConfig.photoTextMarginLeft * 2),
+        x: textAreaX,
+        y: currentY,
+        maxWidth: textAreaWidth,
+        maxLines: 2,
       );
 
-      // Dibujar coordenadas
+      currentY += 30 * scale; // Espacio para 2 líneas de dirección
+
+      // Coordenadas
       _drawText(
         canvas: canvas,
         text: coords,
         style: textStyle,
-        x: WatermarkConfig.photoTextMarginLeft,
-        y: height - WatermarkConfig.photoCoordsPositionY,
-        maxWidth: width - (WatermarkConfig.photoTextMarginLeft * 2),
+        x: textAreaX,
+        y: currentY,
+        maxWidth: textAreaWidth,
       );
 
-      // Dibujar fecha y hora
+      currentY += 18 * scale;
+
+      // Fecha y hora
       _drawText(
         canvas: canvas,
         text: dateTime,
         style: textStyle,
-        x: WatermarkConfig.photoTextMarginLeft,
-        y: height - WatermarkConfig.photoDatePositionY,
-        maxWidth: width - (WatermarkConfig.photoTextMarginLeft * 2),
+        x: textAreaX,
+        y: currentY,
+        maxWidth: textAreaWidth,
       );
 
       // Finalizar el dibujo
@@ -254,9 +229,160 @@ class WatermarkService {
 
       return byteData.buffer.asUint8List();
     } catch (e) {
-      print('Error creando overlay de texto: $e');
+      print('Error creando overlay estilo preview: $e');
       return null;
     }
+  }
+
+  /// Dibuja el minimapa en el canvas
+  Future<void> _drawMinimap({
+    required Canvas canvas,
+    required Uint8List minimapBytes,
+    required double x,
+    required double y,
+    required double width,
+    required double height,
+    required double scale,
+  }) async {
+    try {
+      // Decodificar imagen del minimapa
+      final codec = await ui.instantiateImageCodec(minimapBytes);
+      final frame = await codec.getNextFrame();
+      final minimapImage = frame.image;
+
+      // Dibujar minimapa
+      final srcRect = Rect.fromLTWH(
+        0,
+        0,
+        minimapImage.width.toDouble(),
+        minimapImage.height.toDouble(),
+      );
+      final dstRect = Rect.fromLTWH(x, y, width, height);
+
+      canvas.drawImageRect(minimapImage, srcRect, dstRect, Paint());
+
+      // Dibujar pin rojo en el centro
+      final pinPaint = Paint()
+        ..color = Colors.red[700]!
+        ..style = PaintingStyle.fill;
+
+      // Sombra del pin
+      final shadowPaint = Paint()
+        ..color = Colors.black.withOpacity(0.3)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+      final centerX = x + width / 2;
+      final centerY = y + height / 2;
+      final pinSize = 26 * scale;
+
+      // Dibujar sombra
+      canvas.drawCircle(
+        Offset(centerX + 1, centerY + 1),
+        pinSize / 3,
+        shadowPaint,
+      );
+
+      // Dibujar pin (círculo simple por ahora)
+      canvas.drawCircle(
+        Offset(centerX, centerY - pinSize / 4),
+        pinSize / 3,
+        pinPaint,
+      );
+
+      // Triángulo inferior del pin
+      final path = Path();
+      path.moveTo(centerX - pinSize / 4, centerY - pinSize / 6);
+      path.lineTo(centerX + pinSize / 4, centerY - pinSize / 6);
+      path.lineTo(centerX, centerY + pinSize / 3);
+      path.close();
+      canvas.drawPath(path, pinPaint);
+
+      // Texto "Google" en la esquina inferior del minimapa
+      final googleStyle = GoogleFonts.roboto(
+        fontSize: 11 * scale,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey[700]!,
+        shadows: [
+          Shadow(
+            color: Colors.white.withOpacity(0.7),
+            offset: const Offset(0.5, 0.5),
+          ),
+        ],
+      );
+
+      _drawText(
+        canvas: canvas,
+        text: 'Google',
+        style: googleStyle,
+        x: x + 4 * scale,
+        y: y + height - 15 * scale,
+        maxWidth: width,
+      );
+    } catch (e) {
+      print('Error dibujando minimapa: $e');
+      // Si falla, dibujar placeholder
+      _drawMinimapPlaceholder(
+        canvas: canvas,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        scale: scale,
+      );
+    }
+  }
+
+  /// Dibuja un placeholder cuando no hay imagen de minimapa
+  void _drawMinimapPlaceholder({
+    required Canvas canvas,
+    required double x,
+    required double y,
+    required double width,
+    required double height,
+    required double scale,
+  }) {
+    // Fondo gris claro
+    final bgPaint = Paint()
+      ..color = Colors.grey[300]!
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRect(Rect.fromLTWH(x, y, width, height), bgPaint);
+
+    // Dibujar cuadrícula
+    final gridPaint = Paint()
+      ..color = Colors.grey[400]!
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    final gridSize = 20.0 * scale;
+    for (double gx = x; gx < x + width; gx += gridSize) {
+      canvas.drawLine(Offset(gx, y), Offset(gx, y + height), gridPaint);
+    }
+    for (double gy = y; gy < y + height; gy += gridSize) {
+      canvas.drawLine(Offset(x, gy), Offset(x + width, gy), gridPaint);
+    }
+
+    // Pin rojo en el centro
+    final centerX = x + width / 2;
+    final centerY = y + height / 2;
+    final pinSize = 26 * scale;
+
+    final pinPaint = Paint()
+      ..color = Colors.red[700]!
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(
+      Offset(centerX, centerY - pinSize / 4),
+      pinSize / 3,
+      pinPaint,
+    );
+
+    final path = Path();
+    path.moveTo(centerX - pinSize / 4, centerY - pinSize / 6);
+    path.lineTo(centerX + pinSize / 4, centerY - pinSize / 6);
+    path.lineTo(centerX, centerY + pinSize / 3);
+    path.close();
+    canvas.drawPath(path, pinPaint);
   }
 
   /// Dibuja texto en el canvas
@@ -267,12 +393,13 @@ class WatermarkService {
     required double x,
     required double y,
     required double maxWidth,
+    int maxLines = 1,
   }) {
     final textSpan = TextSpan(text: text, style: style);
     final textPainter = TextPainter(
       text: textSpan,
       textDirection: TextDirection.ltr,
-      maxLines: 1,
+      maxLines: maxLines,
       ellipsis: '...',
     );
 
@@ -280,66 +407,15 @@ class WatermarkService {
     textPainter.paint(canvas, Offset(x, y));
   }
 
-  /// Crea un overlay de texto para la temperatura
-  Future<Uint8List?> _createTemperatureOverlay(
-      String text, int width, int height) async {
-    try {
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      // Estilo de texto para la temperatura
-      final textStyle = GoogleFonts.roboto(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-        shadows: [
-          const Shadow(
-            color: Colors.black,
-            offset: Offset(1, 1),
-            blurRadius: 2,
-          ),
-        ],
-      );
-
-      final textSpan = TextSpan(text: text, style: textStyle);
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      );
-
-      textPainter.layout(maxWidth: width.toDouble());
-
-      // Centrar el texto
-      final xPosition = (width - textPainter.width) / 2;
-      final yPosition = (height - textPainter.height) / 2;
-
-      textPainter.paint(canvas, Offset(xPosition, yPosition));
-
-      final picture = recorder.endRecording();
-      final img = await picture.toImage(width, height);
-      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-
-      if (byteData == null) {
-        return null;
-      }
-
-      return byteData.buffer.asUint8List();
-    } catch (e) {
-      print('Error creando overlay de temperatura: $e');
-      return null;
-    }
-  }
-
-  /// Formatea fecha y hora con acentos
+  /// Formatea fecha y hora con acentos (igual que el preview)
   String _formatFullDateTime(DateTime dt) {
     const dias = [
       'lunes',
       'martes',
-      'miércoles', // Con acento!
+      'miércoles',
       'jueves',
       'viernes',
-      'sábado', // Con acento!
+      'sábado',
       'domingo'
     ];
     final String diaSemana = dias[dt.weekday - 1];
@@ -359,5 +435,16 @@ class WatermarkService {
         (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
 
     return '$diaSemana, $fecha $hora $ampm GMT $signo$horas:$minutos';
+  }
+
+  /// Convierte código de país a emoji de bandera
+  String _getCountryFlag(String countryCode) {
+    if (countryCode.length != 2) return '🏳️';
+
+    final int firstLetter =
+        countryCode.toUpperCase().codeUnitAt(0) - 0x41 + 0x1F1E6;
+    final int secondLetter =
+        countryCode.toUpperCase().codeUnitAt(1) - 0x41 + 0x1F1E6;
+    return String.fromCharCode(firstLetter) + String.fromCharCode(secondLetter);
   }
 }

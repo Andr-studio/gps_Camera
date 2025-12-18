@@ -124,6 +124,7 @@ class VideoWatermarkService {
 
   /// Crea una imagen PNG con el overlay de GPS para superponer al video
   /// Solo contiene la franja inferior con la información GPS
+  /// El diseño es idéntico al preview: minimapa a la izquierda, texto a la derecha
   Future<String?> _createOverlayImage({
     required LocationData locationData,
     Uint8List? minimapBytes,
@@ -141,6 +142,7 @@ class VideoWatermarkService {
       await File(tempImagePath).writeAsBytes(baseImage);
 
       // Aplicar la marca de agua GPS a la imagen base
+      // El nuevo WatermarkService ya usa el diseño del preview
       final watermarkedBytes = await _watermarkService.applyWatermarkToPhoto(
         imagePath: tempImagePath,
         locationData: locationData,
@@ -167,9 +169,11 @@ class VideoWatermarkService {
         return null;
       }
 
-      // Calcular altura del overlay (proporcional al video)
-      // Usamos 15% de la altura del video para el overlay
-      final int overlayHeight = (videoHeight * 0.18).toInt();
+      // Calcular altura del overlay usando la misma fórmula que WatermarkService
+      // scale = videoWidth / 720.0
+      // overlayHeight = 200.0 * scale
+      final double scale = videoWidth / 720.0;
+      final int overlayHeight = (200.0 * scale).toInt();
 
       // Recortar SOLO la franja inferior que contiene el overlay GPS
       final croppedOverlay = img.copyCrop(
