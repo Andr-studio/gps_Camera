@@ -1,8 +1,10 @@
 /// Configuración centralizada para marcas de agua en fotos y videos
 /// El diseño es idéntico al GpsOverlayPreview
+///
+/// INSTRUCCIONES: Modifica estos valores para personalizar la marca de agua
 class WatermarkConfig {
   // ============================================
-  // CONFIGURACIÓN DEL OVERLAY (igual que GpsOverlayPreview)
+  // CONFIGURACIÓN DEL OVERLAY
   // ============================================
 
   /// Ancho de referencia para cálculo de escala
@@ -10,6 +12,7 @@ class WatermarkConfig {
   static const double referenceWidth = 720.0;
 
   /// Altura base del overlay (se multiplica por escala)
+  /// Aumenta este valor para hacer el overlay más alto
   static const double baseOverlayHeight = 200.0;
 
   /// Margen base alrededor del contenido (se multiplica por escala)
@@ -22,22 +25,89 @@ class WatermarkConfig {
   static const double baseMinimapTextGap = 15.0;
 
   // ============================================
-  // TAMAÑOS DE FUENTE BASE (se multiplican por escala)
+  // TAMAÑOS DE FUENTE (se multiplican por escala)
   // ============================================
 
-  /// Tamaño de fuente para el título
+  /// Tamaño de fuente para el título (Ciudad, País)
+  /// Valor recomendado: 16-24
   static const double baseTitleFontSize = 18.0;
 
   /// Tamaño de fuente para texto normal (dirección, coordenadas, fecha)
+  /// Valor recomendado: 10-14
   static const double baseTextFontSize = 11.0;
 
   // ============================================
-  // COLORES
+  // COLORES DEL FONDO
   // ============================================
 
-  /// Opacidad del fondo oscuro (0-255)
-  /// Color: ARGB(150, 3, 3, 3)
+  /// Color del fondo - componente Rojo (0-255)
+  static const int backgroundRed = 3;
+
+  /// Color del fondo - componente Verde (0-255)
+  static const int backgroundGreen = 3;
+
+  /// Color del fondo - componente Azul (0-255)
+  static const int backgroundBlue = 3;
+
+  /// Opacidad/transparencia del fondo (0-255)
+  /// 0 = completamente transparente, 255 = completamente opaco
+  /// Valor actual: 150 (semi-transparente)
   static const int backgroundAlpha = 150;
+
+  // ============================================
+  // COLORES DEL TEXTO
+  // ============================================
+
+  /// Color del texto del título - Rojo (0-255)
+  static const int titleTextRed = 255;
+
+  /// Color del texto del título - Verde (0-255)
+  static const int titleTextGreen = 255;
+
+  /// Color del texto del título - Azul (0-255)
+  static const int titleTextBlue = 255;
+
+  /// Color del texto normal - Rojo (0-255)
+  static const int normalTextRed = 255;
+
+  /// Color del texto normal - Verde (0-255)
+  static const int normalTextGreen = 255;
+
+  /// Color del texto normal - Azul (0-255)
+  static const int normalTextBlue = 255;
+
+  // ============================================
+  // SOMBRA DEL TEXTO
+  // ============================================
+
+  /// Opacidad de la sombra del título (0.0-1.0)
+  static const double titleShadowOpacity = 0.5;
+
+  /// Radio de difuminado de la sombra
+  static const double shadowBlurRadius = 2.0;
+
+  // ============================================
+  // ESPACIADO ENTRE LÍNEAS (se multiplican por escala)
+  // ============================================
+
+  /// Espacio después del título
+  static const double spacingAfterTitle = 24.0;
+
+  /// Espacio para las líneas de dirección (2 líneas)
+  static const double spacingAfterAddress = 30.0;
+
+  /// Espacio después de las coordenadas
+  static const double spacingAfterCoords = 18.0;
+
+  // ============================================
+  // MINIMAPA
+  // ============================================
+
+  /// Tamaño del pin de ubicación (se multiplica por escala)
+  static const double pinSize = 26.0;
+
+  /// Tamaño de fuente del texto "Google" en el minimapa
+  static const double googleTextFontSize = 11.0;
 
   // ============================================
   // MÉTODOS DE AYUDA
