@@ -30,11 +30,11 @@ class WatermarkConfig {
 
   /// Tamaño de fuente para el título (Ciudad, País)
   /// Valor recomendado: 16-24
-  static const double baseTitleFontSize = 18.0;
+  static const double baseTitleFontSize = 24.0;
 
   /// Tamaño de fuente para texto normal (dirección, coordenadas, fecha)
   /// Valor recomendado: 10-14
-  static const double baseTextFontSize = 11.0;
+  static const double baseTextFontSize = 24.0;
 
   // ============================================
   // COLORES DEL FONDO
@@ -91,13 +91,13 @@ class WatermarkConfig {
   // ============================================
 
   /// Espacio después del título
-  static const double spacingAfterTitle = 24.0;
+  static const double spacingAfterTitle = 26.0;
 
   /// Espacio para las líneas de dirección (2 líneas)
-  static const double spacingAfterAddress = 30.0;
+  static const double spacingAfterAddress = 56.0;
 
   /// Espacio después de las coordenadas
-  static const double spacingAfterCoords = 18.0;
+  static const double spacingAfterCoords = 24.0;
 
   // ============================================
   // MINIMAPA

@@ -28,8 +28,8 @@ class VideoWatermarkService {
         return null;
       }
 
-      final int videoWidth = videoInfo['width'] ?? 1920;
-      final int videoHeight = videoInfo['height'] ?? 1080;
+      final int videoWidth = videoInfo['width'] ?? 1080;
+      final int videoHeight = videoInfo['height'] ?? 720;
 
       // 2. Crear una imagen overlay con la marca de agua GPS
       final overlayImagePath = await _createOverlayImage(
@@ -48,7 +48,8 @@ class VideoWatermarkService {
       // 3. Preparar ruta de salida para el video procesado
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final outputPath = '${directory.path}/video_with_watermark_$timestamp.mp4';
+      final outputPath =
+          '${directory.path}/video_with_watermark_$timestamp.mp4';
 
       // 4. Construir comando FFmpeg para superponer la marca de agua
       // El overlay se posiciona en la parte inferior del video
@@ -97,9 +98,7 @@ class VideoWatermarkService {
   /// Obtiene información del video (ancho, alto)
   Future<Map<String, int>?> _getVideoInfo(String videoPath) async {
     try {
-      final session = await FFmpegKit.execute(
-        '-i "$videoPath" -hide_banner'
-      );
+      final session = await FFmpegKit.execute('-i "$videoPath" -hide_banner');
       final output = await session.getOutput();
 
       if (output == null) return {'width': 1920, 'height': 1080};
