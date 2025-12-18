@@ -1,66 +1,86 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import '../models/location_data.dart';
-import 'watermark_config.dart';
+import 'watermark_service.dart';
 
 /// Servicio de marca de agua para videos usando FFmpeg
-/// Soporta UTF-8 completo (acentos, ñ, etc.)
+/// Usa imagen overlay pre-renderizada para mejor compatibilidad con acentos
 class VideoWatermarkService {
-  /// Aplica marca de agua GPS a un video usando FFmpeg
+  final WatermarkService _watermarkService = WatermarkService();
+
+  /// Aplica marca de agua GPS a un video
+  /// Genera una imagen overlay con la información GPS y la superpone al video
   Future<String?> applyWatermarkToVideo({
     required String videoPath,
     required LocationData locationData,
-    minimapBytes,
-    flagBytes,
+    Uint8List? minimapBytes,
+    Uint8List? flagBytes,
   }) async {
     try {
+      // 1. Obtener información del video (resolución)
+      final videoInfo = await _getVideoInfo(videoPath);
+      if (videoInfo == null) {
+        print('Error: No se pudo obtener información del video');
+        return null;
+      }
+
+      final int videoWidth = videoInfo['width'] ?? 1920;
+      final int videoHeight = videoInfo['height'] ?? 1080;
+
+      // 2. Crear una imagen overlay con la marca de agua GPS
+      final overlayImagePath = await _createOverlayImage(
+        locationData: locationData,
+        minimapBytes: minimapBytes,
+        flagBytes: flagBytes,
+        videoWidth: videoWidth,
+        videoHeight: videoHeight,
+      );
+
+      if (overlayImagePath == null) {
+        print('Error: No se pudo crear la imagen overlay');
+        return null;
+      }
+
+      // 3. Preparar ruta de salida para el video procesado
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final outputPath = '${directory.path}/video_with_watermark_$timestamp.mp4';
 
-      // Preparar textos con acentos (FFmpeg soporta UTF-8)
-      final String title = locationData.locationTitle;
-      final String address = locationData.fullAddress ?? locationData.addressLine;
-      final String coords = 'Lat ${locationData.latitude.toStringAsFixed(6)}°  '
-          'Long ${locationData.longitude.toStringAsFixed(6)}°';
-      final String dateTime = _formatFullDateTime(locationData.timestamp);
-
-      // Escapar caracteres especiales para FFmpeg
-      final String escapedTitle = _escapeText(title);
-      final String escapedAddress = _escapeText(address);
-      final String escapedCoords = _escapeText(coords);
-      final String escapedDateTime = _escapeText(dateTime);
-
-      // Construir filtro de texto usando drawtext de FFmpeg
-      final String textFilter = _buildTextFilter(
-        escapedTitle,
-        escapedAddress,
-        escapedCoords,
-        escapedDateTime,
-      );
-
-      // Comando FFmpeg para aplicar overlay de texto al video
-      final command = '-i "$videoPath" '
-          '-vf "$textFilter" '
+      // 4. Construir comando FFmpeg para superponer la marca de agua
+      // El overlay se posiciona en la parte inferior del video
+      final command = '-i "$videoPath" -i "$overlayImagePath" '
+          '-filter_complex "[0:v][1:v]overlay=0:main_h-overlay_h" '
           '-c:a copy -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p '
           '"$outputPath"';
 
-      print('Ejecutando FFmpeg para video: $command');
+      print('Ejecutando FFmpeg: $command');
 
+      // 5. Ejecutar FFmpeg
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
 
-      // Limpiar video original
+      // 6. Limpiar imagen overlay temporal
       try {
-        await File(videoPath).delete();
+        await File(overlayImagePath).delete();
       } catch (e) {
-        print('Error eliminando video original: $e');
+        print('Error eliminando overlay temporal: $e');
       }
 
+      // 7. Verificar resultado
       if (ReturnCode.isSuccess(returnCode)) {
         print('Video procesado exitosamente: $outputPath');
+
+        // Solo eliminar video original si FFmpeg tuvo éxito
+        try {
+          await File(videoPath).delete();
+        } catch (e) {
+          print('Error eliminando video original: $e');
+        }
+
         return outputPath;
       } else {
         print('Error en FFmpeg. Código: $returnCode');
@@ -74,87 +94,107 @@ class VideoWatermarkService {
     }
   }
 
-  /// Construye el filtro de texto para FFmpeg
-  String _buildTextFilter(
-    String title,
-    String address,
-    String coords,
-    String dateTime,
-  ) {
-    // Obtener tamaños desde la configuración
-    final int titleSize = WatermarkConfig.getVideoTitleFontSize();
-    final int textSize = WatermarkConfig.getVideoTextFontSize();
+  /// Obtiene información del video (ancho, alto)
+  Future<Map<String, int>?> _getVideoInfo(String videoPath) async {
+    try {
+      final session = await FFmpegKit.execute(
+        '-i "$videoPath" -hide_banner'
+      );
+      final output = await session.getOutput();
 
-    // Obtener posiciones desde la configuración
-    final int bottomMargin = WatermarkConfig.getVideoBottomMargin();
-    final int lineHeight = WatermarkConfig.getVideoLineHeight();
+      if (output == null) return {'width': 1920, 'height': 1080};
 
-    // Crear overlay oscuro en la parte inferior
-    final int overlayHeight = WatermarkConfig.getVideoOverlayHeight();
-    String filter = 'drawbox=0:h-$overlayHeight:w:$overlayHeight:color=black@${WatermarkConfig.videoBackgroundOpacity}:t=fill';
+      // Buscar resolución en el output (formato: 1920x1080)
+      final regex = RegExp(r'(\d{3,4})x(\d{3,4})');
+      final match = regex.firstMatch(output);
 
-    // Posición X para el texto
-    final int textX = WatermarkConfig.getVideoMarginLeft();
+      if (match != null) {
+        return {
+          'width': int.parse(match.group(1)!),
+          'height': int.parse(match.group(2)!),
+        };
+      }
 
-    // Agregar textos con fuente Roboto (que soporta UTF-8)
-    // Título (más grande)
-    filter += ',drawtext=text=\'$title\':fontfile=/system/fonts/Roboto-Regular.ttf:'
-        'fontsize=$titleSize:fontcolor=white:x=$textX:y=h-${overlayHeight - bottomMargin}:'
-        'shadowcolor=black:shadowx=1:shadowy=1';
-
-    // Dirección
-    filter += ',drawtext=text=\'$address\':fontfile=/system/fonts/Roboto-Regular.ttf:'
-        'fontsize=$textSize:fontcolor=white:x=$textX:y=h-${overlayHeight - bottomMargin - lineHeight}:'
-        'shadowcolor=black:shadowx=1:shadowy=1';
-
-    // Coordenadas
-    filter += ',drawtext=text=\'$coords\':fontfile=/system/fonts/Roboto-Regular.ttf:'
-        'fontsize=$textSize:fontcolor=white:x=$textX:y=h-${overlayHeight - bottomMargin - lineHeight * 2}:'
-        'shadowcolor=black:shadowx=1:shadowy=1';
-
-    // Fecha y hora
-    filter += ',drawtext=text=\'$dateTime\':fontfile=/system/fonts/Roboto-Regular.ttf:'
-        'fontsize=$textSize:fontcolor=white:x=$textX:y=h-${overlayHeight - bottomMargin - lineHeight * 3}:'
-        'shadowcolor=black:shadowx=1:shadowy=1';
-
-    return filter;
+      return {'width': 1920, 'height': 1080};
+    } catch (e) {
+      print('Error obteniendo info del video: $e');
+      return {'width': 1920, 'height': 1080};
+    }
   }
 
-  /// Escapa caracteres especiales para FFmpeg
-  String _escapeText(String text) {
-    return text
-        .replaceAll('\\', '\\\\')
-        .replaceAll(':', '\\:')
-        .replaceAll('\'', '\\\'');
+  /// Crea una imagen PNG con el overlay de GPS para superponer al video
+  /// Solo contiene la franja inferior con la información GPS
+  Future<String?> _createOverlayImage({
+    required LocationData locationData,
+    Uint8List? minimapBytes,
+    Uint8List? flagBytes,
+    required int videoWidth,
+    required int videoHeight,
+  }) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Crear imagen base negra del tamaño del video
+      final tempImagePath = '${directory.path}/temp_base_$timestamp.jpg';
+      final baseImage = _createBlackImage(videoWidth, videoHeight);
+      await File(tempImagePath).writeAsBytes(baseImage);
+
+      // Aplicar la marca de agua GPS a la imagen base
+      final watermarkedBytes = await _watermarkService.applyWatermarkToPhoto(
+        imagePath: tempImagePath,
+        locationData: locationData,
+        minimapBytes: minimapBytes,
+        flagBytes: flagBytes,
+      );
+
+      // Eliminar imagen temporal
+      try {
+        await File(tempImagePath).delete();
+      } catch (e) {
+        print('Error eliminando imagen temporal: $e');
+      }
+
+      if (watermarkedBytes == null) {
+        print('Error: No se pudo aplicar marca de agua');
+        return null;
+      }
+
+      // Decodificar la imagen con marca de agua
+      final fullImage = img.decodeImage(watermarkedBytes);
+      if (fullImage == null) {
+        print('Error: No se pudo decodificar imagen con marca de agua');
+        return null;
+      }
+
+      // Calcular altura del overlay (proporcional al video)
+      // Usamos 15% de la altura del video para el overlay
+      final int overlayHeight = (videoHeight * 0.18).toInt();
+
+      // Recortar SOLO la franja inferior que contiene el overlay GPS
+      final croppedOverlay = img.copyCrop(
+        fullImage,
+        x: 0,
+        y: videoHeight - overlayHeight,
+        width: videoWidth,
+        height: overlayHeight,
+      );
+
+      // Guardar la imagen del overlay como PNG (soporta transparencia)
+      final overlayPath = '${directory.path}/overlay_$timestamp.png';
+      await File(overlayPath).writeAsBytes(img.encodePng(croppedOverlay));
+
+      return overlayPath;
+    } catch (e) {
+      print('Error creando overlay: $e');
+      return null;
+    }
   }
 
-  /// Formatea fecha y hora con acentos (ahora soportado!)
-  String _formatFullDateTime(DateTime dt) {
-    const dias = [
-      'lunes',
-      'martes',
-      'miércoles',  // Con acento!
-      'jueves',
-      'viernes',
-      'sábado',     // Con acento!
-      'domingo'
-    ];
-    final String diaSemana = dias[dt.weekday - 1];
-
-    final String fecha = '${dt.day.toString().padLeft(2, '0')}/'
-        '${dt.month.toString().padLeft(2, '0')}/${dt.year}';
-
-    int hora12 = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final String ampm = dt.hour >= 12 ? 'p. m.' : 'a. m.';
-    final String hora =
-        '${hora12.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-
-    final Duration offset = dt.timeZoneOffset;
-    final String signo = offset.isNegative ? '-' : '+';
-    final String horas = offset.inHours.abs().toString().padLeft(2, '0');
-    final String minutos =
-        (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
-
-    return '$diaSemana, $fecha $hora $ampm GMT $signo$horas:$minutos';
+  /// Crea una imagen negra del tamaño especificado
+  Uint8List _createBlackImage(int width, int height) {
+    final img.Image image = img.Image(width: width, height: height);
+    img.fill(image, color: img.ColorRgba8(0, 0, 0, 255));
+    return Uint8List.fromList(img.encodeJpg(image, quality: 90));
   }
 }
