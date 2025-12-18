@@ -47,7 +47,7 @@
 </queries>
 
     <application
-        android:label="fotografias_gps"
+        android:label="Kerlyns App"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

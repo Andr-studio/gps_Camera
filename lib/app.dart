@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'features/camera/presentation/screens/camera_screen.dart';
+import 'features/camera/presentation/screens/splash_screen.dart';
 
 class PhotoApp extends StatelessWidget {
   const PhotoApp({super.key});
@@ -10,7 +10,7 @@ class PhotoApp extends StatelessWidget {
       title: 'GPS Photo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const CameraScreen(),
+      home: const SplashScreen(),
     );
   }
 }

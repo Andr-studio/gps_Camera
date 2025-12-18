@@ -6,6 +6,7 @@ import 'features/camera/data/services/map_service.dart';
 import 'features/camera/data/services/weather_service.dart';
 import 'features/camera/data/services/flag_service.dart';
 import 'features/camera/data/services/watermark_service.dart';
+import 'features/camera/data/services/video_watermark_service.dart';
 import 'features/camera/data/services/gallery_service.dart';
 import 'features/camera/data/repositories/photo_repository.dart';
 
@@ -20,6 +21,7 @@ void setupDependencies() {
   getIt.registerLazySingleton(() => WeatherService());
   getIt.registerLazySingleton(() => FlagService());
   getIt.registerLazySingleton(() => WatermarkService());
+  getIt.registerLazySingleton(() => VideoWatermarkService());
   getIt.registerLazySingleton(() => GalleryService());
 
   // Repositories
@@ -31,6 +33,7 @@ void setupDependencies() {
         weatherService: getIt(),
         flagService: getIt(),
         watermarkService: getIt(),
+        videoWatermarkService: getIt(),
         galleryService: getIt(),
       ));
 }

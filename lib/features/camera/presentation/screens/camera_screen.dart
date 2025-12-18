@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:gal/gal.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../data/services/camera_service.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/geocoding_service.dart';
@@ -76,6 +75,7 @@ class _CameraScreenState extends State<CameraScreen> {
       weatherService: WeatherService(),
       flagService: _flagService,
       watermarkService: WatermarkService(),
+      videoWatermarkService: _videoWatermarkService,
       galleryService: GalleryService(),
     );
 
@@ -338,88 +338,19 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _openGallery() async {
     try {
-      // 1. Identificar si es Android 13 o superior (API 33+)
-      // El S25+ es Android 14, por lo que requiere permisos específicos.
-
-      bool granted = false;
-
-      // Solicitamos los permisos específicos de medios
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.photos,
-        Permission.videos,
-      ].request();
-
-      granted = statuses[Permission.photos]!.isGranted ||
-          statuses[Permission.videos]!.isGranted;
-
-      // 2. Manejo de "Acceso Limitado" (Característica de Android 14)
-      if (statuses[Permission.photos]!.isLimited) {
-        granted = true; // El usuario eligió solo algunas fotos
-      }
-
-      if (!granted) {
-        if (mounted) {
-          _showPermissionDialog(); // Función auxiliar para guiar al usuario
-        }
-        return;
-      }
-
-      // 3. Abrir la galería
+      // Abrir la galería del dispositivo
       await Gal.open();
     } catch (e) {
-      print('Error en galería: $e');
-
+      print('Error al abrir galería: $e');
       if (mounted) {
-        // Si falla, mostrar diálogo con opciones
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Acceso a galería'),
-            content: const Text(
-                'Abre la aplicación "Galería" o "Fotos" de tu dispositivo para ver las imágenes guardadas.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Entendido'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  openAppSettings();
-                },
-                child: const Text('Abrir configuración'),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo abrir la galería'),
+            backgroundColor: Colors.red.shade700,
           ),
         );
       }
     }
-  }
-
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Permisos necesarios'),
-        content: const Text(
-          'Para ver tus fotos, la app necesita permiso para acceder a la galería. '
-          'Por favor, habilítalo en la configuración de la aplicación.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings(); // Abre la configuración de la app en el teléfono
-            },
-            child: const Text('Ir a Ajustes'),
-          ),
-        ],
-      ),
-    );
   }
 
   /// Formatea la duración en formato MM:SS

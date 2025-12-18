@@ -7,6 +7,7 @@ import '../services/map_service.dart';
 import '../services/weather_service.dart';
 import '../services/flag_service.dart';
 import '../services/watermark_service.dart';
+import '../services/video_watermark_service.dart';
 import '../services/gallery_service.dart';
 
 class PhotoRepository {
@@ -17,6 +18,7 @@ class PhotoRepository {
   final WeatherService _weatherService;
   final FlagService _flagService;
   final WatermarkService _watermarkService;
+  final VideoWatermarkService _videoWatermarkService;
   final GalleryService _galleryService;
 
   PhotoRepository({
@@ -27,6 +29,7 @@ class PhotoRepository {
     required WeatherService weatherService,
     required FlagService flagService,
     required WatermarkService watermarkService,
+    required VideoWatermarkService videoWatermarkService,
     required GalleryService galleryService,
   })  : _cameraService = cameraService,
         _locationService = locationService,
@@ -35,6 +38,7 @@ class PhotoRepository {
         _weatherService = weatherService,
         _flagService = flagService,
         _watermarkService = watermarkService,
+        _videoWatermarkService = videoWatermarkService,
         _galleryService = galleryService;
 
   Future<bool> captureAndSavePhoto() async {
@@ -85,15 +89,15 @@ class PhotoRepository {
       final photo = await _cameraService.takePicture();
       if (photo == null) return false;
 
-      // 5. APLICAR MARCA DE AGUA AVANZADA
+      // 5. APLICAR MARCA DE AGUA CON GOOGLE FONTS (soporta UTF-8 completo)
       final Uint8List? watermarkedImage =
-          await _watermarkService.applyAdvancedWatermark(
+          await _watermarkService.applyWatermarkToPhoto(
         imagePath: photo.path,
         locationData: locationData,
         minimapBytes: minimapBytes,
         flagBytes: flagBytes,
+        weatherData: weather,
         weatherIconBytes: weatherIconBytes,
-        temperature: weather?.temperature,
       );
 
       if (watermarkedImage == null) return false;

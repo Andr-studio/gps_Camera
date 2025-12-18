@@ -203,10 +203,10 @@ class GpsOverlayPreview extends StatelessWidget {
     const dias = [
       'lunes',
       'martes',
-      'miercoles',  // Sin acento para consistencia con WatermarkService
+      'miércoles',  // Con acento (solo vista previa, no afecta la imagen final)
       'jueves',
       'viernes',
-      'sabado',     // Sin acento para consistencia con WatermarkService
+      'sábado',     // Con acento (solo vista previa, no afecta la imagen final)
       'domingo'
     ];
     final String diaSemana = dias[dt.weekday - 1];

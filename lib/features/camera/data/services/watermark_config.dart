@@ -1,157 +1,127 @@
-import 'package:image/image.dart' as img;
+/// Configuración centralizada para marcas de agua en fotos y videos
+class WatermarkConfig {
+  // ============================================
+  // CONFIGURACIÓN PARA FOTOS
+  // ============================================
 
-/// ============================================================
-/// CONFIGURACIÓN DE MARCA DE AGUA - AJUSTES RÁPIDOS
-/// ============================================================
-/// Este archivo permite modificar fácilmente los parámetros
-/// de la marca de agua para VIDEOS y FOTOS de forma separada.
-/// ============================================================
+  /// Tamaño de fuente para el título en fotos
+  static const double photoTitleFontSize = 24.0;
 
-// ************************************************************
-// CONFIGURACIÓN PARA VIDEOS
-// ************************************************************
-class VideoWatermarkConfig {
-  // ----------------------------------------------------------
-  // ESCALA DEL OVERLAY
-  // ----------------------------------------------------------
-  /// Escala del overlay de video (0.0 a 1.0)
-  /// Valores recomendados:
-  /// - 0.30 = 30% (muy pequeño, discreto)
-  /// - 0.40 = 40% (actual, discreto)
-  /// - 0.50 = 50% (mediano)
-  /// - 0.60 = 60% (visible)
-  /// - 0.70 = 70% (grande)
-  static const double overlayScale = 0.40;
+  /// Tamaño de fuente para texto normal en fotos (dirección, coordenadas, fecha)
+  static const double photoTextFontSize = 18.0;
 
-  // ----------------------------------------------------------
-  // COLOR DEL FONDO
-  // ----------------------------------------------------------
-  /// Color del fondo del overlay (RGB)
-  /// Valores: 0-255 para cada componente
-  static const int backgroundRed = 3;
-  static const int backgroundGreen = 3;
-  static const int backgroundBlue = 3;
+  /// Altura del overlay oscuro en fotos
+  static const double photoOverlayHeight = 200.0;
 
-  /// Opacidad del fondo (0-255)
-  /// - 0 = completamente transparente
-  /// - 128 = 50% opaco
-  /// - 150 = ~59% opaco (actual)
-  /// - 200 = ~78% opaco
-  /// - 255 = completamente sólido
-  static const int backgroundAlpha = 150;
+  /// Margen izquierdo del texto en fotos
+  static const double photoTextMarginLeft = 20.0;
 
-  // ----------------------------------------------------------
-  // POSICIÓN DEL OVERLAY EN EL VIDEO
-  // ----------------------------------------------------------
-  /// Margen desde los bordes del video (en píxeles)
-  static const int marginFromEdge = 10;
+  /// Posición Y del título en fotos (desde abajo)
+  static const double photoTitlePositionY = 180.0;
 
-  // ----------------------------------------------------------
-  // RESOLUCIÓN BASE DEL VIDEO
-  // ----------------------------------------------------------
-  /// Resolución de referencia para crear el overlay
-  static const int baseVideoWidth = 1920;
-  static const int baseVideoHeight = 1080;
+  /// Posición Y de la dirección en fotos (desde abajo)
+  static const double photoAddressPositionY = 145.0;
 
-  // ----------------------------------------------------------
-  // MÉTODOS AUXILIARES
-  // ----------------------------------------------------------
-  /// Retorna el color del fondo como ColorRgba8
-  static img.Color get backgroundColor =>
-      img.ColorRgba8(backgroundRed, backgroundGreen, backgroundBlue, backgroundAlpha);
-}
+  /// Posición Y de las coordenadas en fotos (desde abajo)
+  static const double photoCoordsPositionY = 110.0;
 
-// ************************************************************
-// CONFIGURACIÓN PARA FOTOS
-// ************************************************************
-class PhotoWatermarkConfig {
-  // ----------------------------------------------------------
-  // ESCALA BASE
-  // ----------------------------------------------------------
-  /// Ancho de referencia para calcular la escala
-  /// La escala se calcula como: anchoImagen / referenceWidth
-  static const double referenceWidth = 720.0;
+  /// Posición Y de la fecha en fotos (desde abajo)
+  static const double photoDatePositionY = 75.0;
 
-  // ----------------------------------------------------------
-  // DIMENSIONES DEL OVERLAY
-  // ----------------------------------------------------------
-  /// Altura del overlay en píxeles (antes de escalar)
-  /// Se multiplica por la escala: overlayBaseHeight * scale
-  static const int overlayBaseHeight = 200;
+  /// Opacidad del fondo oscuro en fotos (0.0 - 1.0)
+  static const double photoBackgroundOpacity = 0.6;
 
-  /// Margen interno del overlay (antes de escalar)
-  static const int baseMargin = 10;
+  /// Peso de la fuente del título en fotos (w300=light, w400=regular, w500=medium, w700=bold)
+  static const int photoTitleFontWeight = 500; // medium
 
-  // ----------------------------------------------------------
-  // COLOR DEL FONDO
-  // ----------------------------------------------------------
-  /// Color del fondo del overlay (RGB)
-  static const int backgroundRed = 3;
-  static const int backgroundGreen = 3;
-  static const int backgroundBlue = 3;
+  /// Peso de la fuente del texto en fotos
+  static const int photoTextFontWeight = 400; // regular
 
-  /// Opacidad del fondo (0-255)
-  static const int backgroundAlpha = 150;
+  // ============================================
+  // CONFIGURACIÓN DE MINIMAPA Y BANDERA
+  // ============================================
 
-  // ----------------------------------------------------------
-  // TAMAÑOS DE FUENTE
-  // ----------------------------------------------------------
-  /// Fuente para texto pequeño (Google en mapa, etc.)
-  /// Opciones disponibles: img.arial14, img.arial24, img.arial48
-  static img.BitmapFont get smallFont => img.arial14;
+  /// Ancho del minimapa en fotos
+  static const int photoMinimapWidth = 120;
 
-  /// Fuente para texto principal (título, dirección, coordenadas, fecha)
-  /// Opciones disponibles: img.arial14, img.arial24, img.arial48
-  static img.BitmapFont get mainFont => img.arial24;
+  /// Alto del minimapa en fotos
+  static const int photoMinimapHeight = 120;
 
-  // ----------------------------------------------------------
-  // ESPACIADO DE LÍNEAS
-  // ----------------------------------------------------------
-  /// Espaciado entre líneas de texto (antes de escalar)
-  static const int lineSpacing = 26;
+  /// Margen del minimapa desde el borde izquierdo en fotos
+  static const int photoMinimapMarginLeft = 10;
 
-  /// Espaciado después del título (antes de escalar)
-  static const int titleSpacing = 15;
+  /// Margen del minimapa desde el borde inferior en fotos
+  static const int photoMinimapMarginBottom = 10;
 
-  /// Altura de línea para dirección (antes de escalar)
-  static const int addressLineHeight = 30;
+  /// Ancho de la bandera en fotos
+  static const int photoFlagWidth = 60;
 
-  /// Espacio antes de coordenadas (antes de escalar)
-  static const int coordsSpacing = 10;
+  /// Alto de la bandera en fotos
+  static const int photoFlagHeight = 40;
 
-  // ----------------------------------------------------------
-  // COLORES DE TEXTO
-  // ----------------------------------------------------------
-  /// Color del texto principal (blanco)
-  static const int textRed = 255;
-  static const int textGreen = 255;
-  static const int textBlue = 255;
-  static const int textAlpha = 255;
+  /// Margen de la bandera desde el borde derecho en fotos
+  static const int photoFlagMarginRight = 10;
 
-  /// Color de la sombra del texto
-  static const int shadowRed = 0;
-  static const int shadowGreen = 0;
-  static const int shadowBlue = 0;
-  static const int shadowAlpha = 128; // 50% opacidad
+  /// Margen de la bandera desde el borde superior en fotos
+  static const int photoFlagMarginTop = 10;
 
-  // ----------------------------------------------------------
-  // MINIMAPA
-  // ----------------------------------------------------------
-  /// Tamaño base del minimapa (antes de escalar)
-  static const int mapBaseSize = 130;
+  // ============================================
+  // CONFIGURACIÓN PARA VIDEOS
+  // ============================================
 
-  // ----------------------------------------------------------
-  // MÉTODOS AUXILIARES
-  // ----------------------------------------------------------
-  /// Retorna el color del fondo como ColorRgba8
-  static img.Color get backgroundColor =>
-      img.ColorRgba8(backgroundRed, backgroundGreen, backgroundBlue, backgroundAlpha);
+  /// Escala general para videos (0.7 = 70% del tamaño de fotos)
+  /// Ajusta este valor para hacer la marca de agua más grande o pequeña en videos
+  static const double videoScale = 0.7;
 
-  /// Retorna el color del texto principal
-  static img.Color get textColor =>
-      img.ColorRgba8(textRed, textGreen, textBlue, textAlpha);
+  /// Tamaño de fuente base para el título en videos (se multiplica por videoScale)
+  static const double videoBaseTitleFontSize = 24.0;
 
-  /// Retorna el color de la sombra
-  static img.Color get shadowColor =>
-      img.ColorRgba8(shadowRed, shadowGreen, shadowBlue, shadowAlpha);
+  /// Tamaño de fuente base para texto en videos (se multiplica por videoScale)
+  static const double videoBaseTextFontSize = 18.0;
+
+  /// Altura base del overlay en videos (se multiplica por videoScale)
+  static const double videoBaseOverlayHeight = 200.0;
+
+  /// Margen base para textos en videos (se multiplica por videoScale)
+  static const double videoBaseMargin = 20.0;
+
+  /// Espaciado base entre líneas en videos (se multiplica por videoScale)
+  static const double videoBaseLineHeight = 35.0;
+
+  /// Opacidad del fondo oscuro en videos (0.0 - 1.0)
+  static const double videoBackgroundOpacity = 0.6;
+
+  // ============================================
+  // MÉTODOS DE AYUDA PARA VIDEOS
+  // ============================================
+
+  /// Obtiene el tamaño de fuente del título para videos
+  static int getVideoTitleFontSize() {
+    return (videoBaseTitleFontSize * videoScale).toInt();
+  }
+
+  /// Obtiene el tamaño de fuente del texto para videos
+  static int getVideoTextFontSize() {
+    return (videoBaseTextFontSize * videoScale).toInt();
+  }
+
+  /// Obtiene la altura del overlay para videos
+  static int getVideoOverlayHeight() {
+    return (videoBaseOverlayHeight * videoScale).toInt();
+  }
+
+  /// Obtiene el margen izquierdo para videos
+  static int getVideoMarginLeft() {
+    return (videoBaseMargin * videoScale).toInt();
+  }
+
+  /// Obtiene el espaciado entre líneas para videos
+  static int getVideoLineHeight() {
+    return (videoBaseLineHeight * videoScale).toInt();
+  }
+
+  /// Obtiene el margen inferior para videos
+  static int getVideoBottomMargin() {
+    return (20 * videoScale).toInt();
+  }
 }

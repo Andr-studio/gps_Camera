@@ -35,6 +35,11 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // Deshabilitamos minificación para evitar problemas con plugins nativos
+            // El shrinking de recursos sí ayuda a reducir el tamaño del APK
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
