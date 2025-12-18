@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
 import '../models/location_data.dart';
+import 'watermark_config.dart';
 import 'weather_service.dart';
 
 /// Servicio de marca de agua para fotos usando Canvas y Google Fonts
 /// Diseño idéntico a GpsOverlayPreview: minimapa a la izquierda, texto a la derecha
+/// Configuración centralizada en WatermarkConfig
 class WatermarkService {
   /// Aplica marca de agua GPS a una foto
   /// El diseño es idéntico al preview: minimapa integrado a la izquierda, texto a la derecha
@@ -31,8 +33,8 @@ class WatermarkService {
         return null;
       }
 
-      // Calcular escala basada en el ancho de la imagen (referencia: 720px como en el preview)
-      final double scale = originalImage.width / 720.0;
+      // Calcular escala basada en el ancho de la imagen
+      final double scale = WatermarkConfig.getScale(originalImage.width);
 
       // Preparar textos
       final String title = locationData.locationTitle;
@@ -101,20 +103,25 @@ class WatermarkService {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
 
-      // Dimensiones del overlay (igual que el preview)
-      final double overlayHeight = 200.0 * scale;
-      final double margin = 10.0 * scale;
-      final double minimapWidth = 130.0 * scale;
+      // Dimensiones del overlay desde configuración
+      final double overlayHeight = WatermarkConfig.baseOverlayHeight * scale;
+      final double margin = WatermarkConfig.baseMargin * scale;
+      final double minimapWidth = WatermarkConfig.baseMinimapWidth * scale;
       final double minimapHeight = overlayHeight - margin * 2;
-      final double textAreaX = margin + minimapWidth + 15 * scale;
+      final double textAreaX = margin + minimapWidth + WatermarkConfig.baseMinimapTextGap * scale;
       final double textAreaWidth = width - textAreaX - margin;
 
       // Posición Y del overlay (parte inferior)
       final double overlayY = height - overlayHeight;
 
-      // 1. Fondo oscuro semitransparente
+      // 1. Fondo oscuro semitransparente (colores desde configuración)
       final overlayPaint = Paint()
-        ..color = const Color.fromARGB(150, 3, 3, 3)
+        ..color = Color.fromARGB(
+          WatermarkConfig.backgroundAlpha,
+          WatermarkConfig.backgroundRed,
+          WatermarkConfig.backgroundGreen,
+          WatermarkConfig.backgroundBlue,
+        )
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(
@@ -148,16 +155,24 @@ class WatermarkService {
       // 3. Dibujar área de texto a la derecha del minimapa
       double currentY = overlayY + margin;
 
+      // Color del título desde configuración
+      final titleColor = Color.fromARGB(
+        255,
+        WatermarkConfig.titleTextRed,
+        WatermarkConfig.titleTextGreen,
+        WatermarkConfig.titleTextBlue,
+      );
+
       // Título + bandera emoji
       final titleStyle = GoogleFonts.roboto(
-        fontSize: 18 * scale,
+        fontSize: WatermarkConfig.baseTitleFontSize * scale,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: titleColor,
         shadows: [
           Shadow(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withOpacity(WatermarkConfig.titleShadowOpacity),
             offset: const Offset(1, 1),
-            blurRadius: 2,
+            blurRadius: WatermarkConfig.shadowBlurRadius,
           ),
         ],
       );
@@ -173,13 +188,21 @@ class WatermarkService {
         maxWidth: textAreaWidth,
       );
 
-      currentY += 24 * scale; // Espacio después del título
+      currentY += WatermarkConfig.spacingAfterTitle * scale;
+
+      // Color del texto normal desde configuración
+      final textColor = Color.fromARGB(
+        255,
+        WatermarkConfig.normalTextRed,
+        WatermarkConfig.normalTextGreen,
+        WatermarkConfig.normalTextBlue,
+      );
 
       // Estilo para texto normal
       final textStyle = GoogleFonts.roboto(
-        fontSize: 11 * scale,
+        fontSize: WatermarkConfig.baseTextFontSize * scale,
         fontWeight: FontWeight.normal,
-        color: Colors.white,
+        color: textColor,
         height: 1.3,
       );
 
@@ -194,7 +217,7 @@ class WatermarkService {
         maxLines: 2,
       );
 
-      currentY += 30 * scale; // Espacio para 2 líneas de dirección
+      currentY += WatermarkConfig.spacingAfterAddress * scale;
 
       // Coordenadas
       _drawText(
@@ -206,7 +229,7 @@ class WatermarkService {
         maxWidth: textAreaWidth,
       );
 
-      currentY += 18 * scale;
+      currentY += WatermarkConfig.spacingAfterCoords * scale;
 
       // Fecha y hora
       _drawText(
@@ -273,7 +296,7 @@ class WatermarkService {
 
       final centerX = x + width / 2;
       final centerY = y + height / 2;
-      final pinSize = 26 * scale;
+      final pinSize = WatermarkConfig.pinSize * scale;
 
       // Dibujar sombra
       canvas.drawCircle(
@@ -282,7 +305,7 @@ class WatermarkService {
         shadowPaint,
       );
 
-      // Dibujar pin (círculo simple por ahora)
+      // Dibujar pin (círculo)
       canvas.drawCircle(
         Offset(centerX, centerY - pinSize / 4),
         pinSize / 3,
@@ -299,7 +322,7 @@ class WatermarkService {
 
       // Texto "Google" en la esquina inferior del minimapa
       final googleStyle = GoogleFonts.roboto(
-        fontSize: 11 * scale,
+        fontSize: WatermarkConfig.googleTextFontSize * scale,
         fontWeight: FontWeight.w500,
         color: Colors.grey[700]!,
         shadows: [
@@ -365,7 +388,7 @@ class WatermarkService {
     // Pin rojo en el centro
     final centerX = x + width / 2;
     final centerY = y + height / 2;
-    final pinSize = 26 * scale;
+    final pinSize = WatermarkConfig.pinSize * scale;
 
     final pinPaint = Paint()
       ..color = Colors.red[700]!
