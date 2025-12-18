@@ -5,6 +5,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import '../models/location_data.dart';
+import 'watermark_config.dart';
 import 'watermark_service.dart';
 
 /// Servicio de marca de agua para videos usando FFmpeg
@@ -124,6 +125,7 @@ class VideoWatermarkService {
   /// Crea una imagen PNG con el overlay de GPS para superponer al video
   /// Solo contiene la franja inferior con la información GPS
   /// El diseño es idéntico al preview: minimapa a la izquierda, texto a la derecha
+  /// El tamaño se controla con WatermarkConfig.videoScaleFactor
   Future<String?> _createOverlayImage({
     required LocationData locationData,
     Uint8List? minimapBytes,
@@ -135,13 +137,21 @@ class VideoWatermarkService {
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      // Crear imagen base negra del tamaño del video
+      // Aplicar factor de escala para videos
+      // Si videoScaleFactor = 0.7, el watermark será 70% del tamaño
+      final double scaleFactor = WatermarkConfig.videoScaleFactor;
+
+      // Calcular dimensiones virtuales para generar el watermark
+      // Usamos estas dimensiones para que el watermark se genere al tamaño deseado
+      final int virtualWidth = (videoWidth * scaleFactor).toInt();
+      final int virtualHeight = (videoHeight * scaleFactor).toInt();
+
+      // Crear imagen base negra del tamaño virtual
       final tempImagePath = '${directory.path}/temp_base_$timestamp.jpg';
-      final baseImage = _createBlackImage(videoWidth, videoHeight);
+      final baseImage = _createBlackImage(virtualWidth, virtualHeight);
       await File(tempImagePath).writeAsBytes(baseImage);
 
-      // Aplicar la marca de agua GPS a la imagen base
-      // El nuevo WatermarkService ya usa el diseño del preview
+      // Aplicar la marca de agua GPS a la imagen base virtual
       final watermarkedBytes = await _watermarkService.applyWatermarkToPhoto(
         imagePath: tempImagePath,
         locationData: locationData,
@@ -168,24 +178,32 @@ class VideoWatermarkService {
         return null;
       }
 
-      // Calcular altura del overlay usando la misma fórmula que WatermarkService
-      // scale = videoWidth / 720.0
-      // overlayHeight = 200.0 * scale
-      final double scale = videoWidth / 720.0;
-      final int overlayHeight = (200.0 * scale).toInt();
+      // Calcular altura del overlay usando la fórmula de WatermarkService
+      // pero con las dimensiones virtuales
+      final double scale = virtualWidth / WatermarkConfig.referenceWidth;
+      final int overlayHeight = (WatermarkConfig.baseOverlayHeight * scale).toInt();
 
       // Recortar SOLO la franja inferior que contiene el overlay GPS
       final croppedOverlay = img.copyCrop(
         fullImage,
         x: 0,
-        y: videoHeight - overlayHeight,
-        width: videoWidth,
+        y: virtualHeight - overlayHeight,
+        width: virtualWidth,
         height: overlayHeight,
       );
 
-      // Guardar la imagen del overlay como PNG (soporta transparencia)
+      // Redimensionar el overlay al ancho real del video
+      // Esto mantiene la proporción pero adapta al tamaño del video
+      final int finalOverlayHeight = (overlayHeight / scaleFactor).toInt();
+      final resizedOverlay = img.copyResize(
+        croppedOverlay,
+        width: videoWidth,
+        height: finalOverlayHeight,
+      );
+
+      // Guardar la imagen del overlay como PNG
       final overlayPath = '${directory.path}/overlay_$timestamp.png';
-      await File(overlayPath).writeAsBytes(img.encodePng(croppedOverlay));
+      await File(overlayPath).writeAsBytes(img.encodePng(resizedOverlay));
 
       return overlayPath;
     } catch (e) {

@@ -110,6 +110,16 @@ class WatermarkConfig {
   static const double googleTextFontSize = 11.0;
 
   // ============================================
+  // ESCALA DE VIDEO
+  // ============================================
+
+  /// Factor de escala adicional para videos (1.0 = igual que fotos)
+  /// Valores menores = marca de agua más pequeña
+  /// Valores mayores = marca de agua más grande
+  /// Ejemplo: 0.7 = 70% del tamaño, 1.5 = 150% del tamaño
+  static const double videoScaleFactor = 1.0;
+
+  // ============================================
   // MÉTODOS DE AYUDA
   // ============================================
 
